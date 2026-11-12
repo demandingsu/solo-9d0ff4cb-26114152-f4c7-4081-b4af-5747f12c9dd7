@@ -24,3 +24,36 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+
+  # 可复现的“抓取过程中公告被更正”样例站点：按请求顺序先返回旧版、再返回新版。
+  # 场景通过 CHANGE_SCENARIO 选择（stable / link_added / field_changed / cancel_added /
+  # recheck_failed / unrelated_changed），详见 scripts/change_server.py。
+  change-site:
+    image: python:3.11-slim
+    container_name: tender-change-site
+    command:
+      - python
+      - /site/change_server.py
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8091"
+      - --root
+      - /site/changed
+      - --scenario
+      - ${CHANGE_SCENARIO:-link_added}
+    volumes:
+      - ./scripts/change_server.py:/site/change_server.py:ro
+      - ./sample-site/changed:/site/changed:ro
+    ports:
+      - "8091:8091"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8091/healthz', timeout=3).status==200 else 1)
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped

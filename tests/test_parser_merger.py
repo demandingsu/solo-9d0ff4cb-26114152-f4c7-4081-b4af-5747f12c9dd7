@@ -243,6 +243,48 @@ def test_merge_any_failure_forces_pending_and_no_deadline():
     assert any("抓取失败" in w for w in result.warnings)
 
 
+def test_merge_recheck_change_forces_pending_and_clears_deadline():
+    # 复核发现本项目链接/字段变化 → 即使告警内容本身完整，旧期限也不可返回
+    result = merge_notices(
+        MergeInput(
+            notices=[
+                _notice(NoticeKind.ORIGINAL, datetime(2026, 11, 1, 10), datetime(2026, 11, 10, 9, 30)),
+                _notice(NoticeKind.CORRECTION, datetime(2026, 11, 3, 15), None),
+            ],
+            changes=["复核发现列表新增本项目关联链接：http://x/new.html"],
+        )
+    )
+    assert result.status == ProjectStatus.PENDING
+    assert result.can_bid is False
+    assert result.effective_deadline is None
+    assert any("复核" in w for w in result.warnings)
+    # 已知公告明细仍按发布时间保留，便于人工核实
+    assert [n.kind for n in result.ordered_notices] == [
+        NoticeKind.ORIGINAL,
+        NoticeKind.CORRECTION,
+    ]
+
+
+def test_merge_changes_do_not_drop_cancelled_signal():
+    result = merge_notices(
+        MergeInput(
+            notices=[
+                _notice(
+                    NoticeKind.CANCELLATION,
+                    datetime(2026, 11, 4, 11),
+                    None,
+                    cancelled=True,
+                    reason="预算收回",
+                )
+            ],
+            changes=["复核读取详情页失败：http://x/cancel.html"],
+        )
+    )
+    assert result.status == ProjectStatus.PENDING
+    assert result.cancelled is True
+    assert result.effective_deadline is None
+
+
 def test_merge_missing_publish_time_forces_pending():
     result = merge_notices(
         MergeInput(

@@ -20,10 +20,11 @@ from app.models import NoticeKind, NoticeRecord, ProjectStatus
 
 @dataclass
 class MergeInput:
-    """合并器输入：成功解析的公告 + 失败的关联页面。"""
+    """合并器输入：成功解析的公告 + 失败的关联页面 + 复核发现的变化。"""
 
     notices: list[NoticeRecord]
     failures: list[str] = field(default_factory=list)  # 抓取/解析失败的详情页 URL
+    changes: list[str] = field(default_factory=list)  # 复核发现的本项目变化说明
 
 
 @dataclass
@@ -43,6 +44,19 @@ def _sort_key(notice: NoticeRecord) -> datetime:
 
 def merge_notices(data: MergeInput) -> MergeResult:
     warnings = list(data.failures and [f"关联详情页抓取失败：{u}" for u in data.failures])
+    warnings.extend(data.changes)
+
+    # 复核发现列表本项目的关联链接增删、关键字段变化或复核读取失败：
+    # 本轮抓到的旧期限已不可信，必须待核实并清空有效期限
+    if data.changes:
+        return MergeResult(
+            status=ProjectStatus.PENDING,
+            can_bid=False,
+            effective_deadline=None,
+            cancelled=any(n.cancelled for n in data.notices),
+            ordered_notices=sorted(data.notices, key=_sort_key),
+            warnings=warnings,
+        )
 
     # 发布时间缺失 → 无法保证合并顺序，按待核实处理
     undated = [n for n in data.notices if n.published_at is None]

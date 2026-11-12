@@ -52,11 +52,19 @@ class NoticeRecord(BaseModel):
 
 
 class SourceLink(BaseModel):
-    """来源链接（列表页 + 参与合并的详情页）。"""
+    """来源链接（列表页 + 参与合并的详情页 + 复核发现的变化来源）。"""
 
-    role: str  # list / original / correction / cancellation
+    role: str  # list / original / correction / cancellation / failed / changed
     url: HttpUrl
     title: str | None = None
+
+
+class ChangeAlert(BaseModel):
+    """复核阶段发现的变化，供投标专员据此人工核实。"""
+
+    kind: str  # link_added / link_removed / field_changed / recheck_failed / recheck_recovered
+    url: HttpUrl
+    message: str
 
 
 class FetchResponse(BaseModel):
@@ -72,5 +80,9 @@ class FetchResponse(BaseModel):
     cancelled: bool = False
     notices: list[NoticeRecord] = Field(default_factory=list)
     sources: list[SourceLink] = Field(default_factory=list)
+    changes: list[ChangeAlert] = Field(
+        default_factory=list,
+        description="复核列表/详情后发现的本项目链接增删、关键字段变化或复核读取失败",
+    )
     warnings: list[str] = Field(default_factory=list)
     fetched_at: datetime

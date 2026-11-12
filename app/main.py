@@ -17,8 +17,8 @@ from app.models import FetchRequest, FetchResponse
 
 app = FastAPI(
     title="采购公告采集 API",
-    description="抓取同站点原公告与更正公告，按发布时间合并，输出投标状态与有效截止时间。",
-    version="1.0.0",
+    description="抓取同站点原公告与更正公告，抓齐后复核列表/详情变化，按发布时间合并，输出投标状态与有效截止时间。",
+    version="1.1.0",
 )
 
 
@@ -37,7 +37,8 @@ pre { background: #f4f4f6; padding: 1rem; border-radius: 8px; overflow:auto; max
 </head>
 <body>
 <h1>采购公告采集 API 演示</h1>
-<p class="hint">示例站点由 docker compose 中的 nginx 提供，默认地址 <code>http://localhost:8080/list.html</code></p>
+<p class="hint">示例站点由 docker compose 中的 nginx 提供，默认地址 <code>http://localhost:8080/list.html</code>；
+变动样例站点地址 <code>http://localhost:8091/list.html</code>（项目 <code>GSB-2026-004</code>）。</p>
 <form id="f">
   <p><label>列表页 URL <input id="list_url" value="http://localhost:8080/list.html"></label></p>
   <p><label>项目编号 <input id="project_code" value="GSB-2026-001"></label></p>
